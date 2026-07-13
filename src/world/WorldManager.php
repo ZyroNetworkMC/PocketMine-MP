@@ -234,7 +234,7 @@ class WorldManager{
 			$done = 0;
 			$total = count($selected);
 			foreach($selected as $index){
-				
+
 				World::getXZ($index, $chunkX, $chunkZ);
 				$world->orderChunkPopulation($chunkX, $chunkZ, null)->onCompletion(
 					static function() use ($world, &$done, $total) : void{

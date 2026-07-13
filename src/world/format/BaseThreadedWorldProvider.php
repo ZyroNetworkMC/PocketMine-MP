@@ -57,19 +57,19 @@ class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 	public function loadChunk(int $chunkX, int $chunkZ) : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) use ($chunkZ, $chunkX) : ?LoadedChunkData{
 			return $provider->loadChunk($chunkX, $chunkZ);
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function getWorldData() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : WorldData{
 			return $provider->getWorldData();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function calculateChunkCount() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : int{
 			return $provider->calculateChunkCount();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	/**
@@ -83,18 +83,18 @@ class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 			}else{
 				throw new \RuntimeException("not saved");
 			}
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function reloadWorldData() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : void{
 			$provider->reloadWorldData();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function doGarbageCollection() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider){
 			$provider->doGarbageCollection();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 }

@@ -91,12 +91,14 @@ use pocketmine\world\format\Chunk;
 use pocketmine\world\format\io\ChunkData;
 use pocketmine\world\format\io\exception\CorruptedChunkException;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
+use pocketmine\world\format\io\LoadedChunkData;
 use pocketmine\world\format\io\WorldData;
 use pocketmine\world\format\io\WritableWorldProvider;
 use pocketmine\world\format\LightArray;
 use pocketmine\world\format\SubChunk;
 use pocketmine\world\format\ThreadedWorldProvider;
 use pocketmine\world\format\WorldProviderThread;
+use pocketmine\world\thread\Future;
 use pocketmine\world\generator\executor\AsyncGeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutorSetupParameters;
@@ -644,13 +646,13 @@ class World implements ChunkManager{
 		$this->unloadCallbacks = [];
 
 		foreach($this->chunks as $chunkHash => $chunk){
-			
+
 			self::getXZ($chunkHash, $chunkX, $chunkZ);
 			$this->unloadChunk($chunkX, $chunkZ, false);
 		}
 		$this->knownUngeneratedChunks = [];
 		foreach($this->entitiesByChunk as $chunkHash => $entities){
-			
+
 			self::getXZ($chunkHash, $chunkX, $chunkZ);
 
 			$leakedEntities = 0;
@@ -895,7 +897,7 @@ class World implements ChunkManager{
 	 */
 	public function unregisterChunkListenerFromAll(ChunkListener $listener) : void{
 		foreach($this->chunkListeners as $hash => $listeners){
-			
+
 			World::getXZ($hash, $chunkX, $chunkZ);
 			$this->unregisterChunkListener($listener, $chunkX, $chunkZ);
 		}
@@ -956,7 +958,7 @@ class World implements ChunkManager{
 		}
 		foreach($this->loadingChunks as $chunkPosHash => $future){
 			assert(is_int($chunkPosHash));
-					
+
 					World::getXZ($chunkPosHash,$chunkX, $chunkZ);
 			if(!$future->isDone()){
 				continue;
@@ -1053,7 +1055,7 @@ class World implements ChunkManager{
 					if(count($blocks) === 0){ //blocks can be set normally and then later re-set with direct send
 						continue;
 					}
-					
+
 					World::getXZ($index, $chunkX, $chunkZ);
 					if(!$this->isChunkLoaded($chunkX, $chunkZ)){
 						//a previous chunk may have caused this one to be unloaded by a ChunkListener
@@ -1081,7 +1083,7 @@ class World implements ChunkManager{
 		}
 
 		foreach($this->packetBuffersByChunk as $index => $entries){
-			
+
 			World::getXZ($index, $chunkX, $chunkZ);
 			$chunkPlayers = $this->getChunkPlayers($chunkX, $chunkZ);
 			if(count($chunkPlayers) > 0){
@@ -1303,7 +1305,7 @@ class World implements ChunkManager{
 			$chunkTickableCache = [];
 
 			foreach($this->recheckTickingChunks as $hash => $_){
-				
+
 				World::getXZ($hash, $chunkX, $chunkZ);
 				if($this->isChunkTickable($chunkX, $chunkZ, $chunkTickableCache)){
 					$this->validTickingChunks[$hash] = $hash;
@@ -1315,7 +1317,7 @@ class World implements ChunkManager{
 		}
 
 		foreach($this->validTickingChunks as $index => $_){
-			
+
 			World::getXZ($index, $chunkX, $chunkZ);
 
 			$this->tickChunk($chunkX, $chunkZ);
@@ -1489,7 +1491,7 @@ class World implements ChunkManager{
 		$this->timings->syncChunkSave->startTiming();
 		try{
 			foreach($this->chunks as $chunkHash => $chunk){
-				
+
 				self::getXZ($chunkHash, $chunkX, $chunkZ);
 				if(isset($this->loadingChunks[$chunkHash])){
 					$this->logger->debug("Ignoring chunk x=$chunkX z=$chunkZ");
@@ -1499,8 +1501,8 @@ class World implements ChunkManager{
 					$this->provider->saveChunk($chunkX, $chunkZ, new ChunkData(
 						$chunk->getSubChunks(),
 						$chunk->isPopulated(),
-						array_map(fn(Entity $e) => $e->saveNBT(), array_filter($this->getChunkEntities($chunkX, $chunkZ), fn(Entity $e) => $e->canSaveWithChunk())),
-						array_map(fn(Tile $t) => $t->saveNBT(), $chunk->getTiles()),
+						array_map(fn(Entity $e) => $e->saveNBT(), array_values(array_filter($this->getChunkEntities($chunkX, $chunkZ), fn(Entity $e) => $e->canSaveWithChunk()))),
+						array_map(fn(Tile $t) => $t->saveNBT(), array_values($chunk->getTiles())),
 					), $chunk->getTerrainDirtyFlags())->get();
 					$chunk->clearTerrainDirtyFlags();
 				}
@@ -3039,7 +3041,7 @@ class World implements ChunkManager{
 		return $this->chunks[$chunkHash];
 	}
 
-	
+
 	private function onChunkDataLoaded(\pocketmine\world\format\io\LoadedChunkData $loadedChunkData, int $x, int $z, int $chunkHash) : void{
 		$chunkData = $loadedChunkData->getData();
 		$chunk = new Chunk($chunkData->getSubChunks(), $chunkData->isPopulated());
