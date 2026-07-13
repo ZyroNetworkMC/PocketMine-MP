@@ -21,11 +21,15 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\world\format\io;
+namespace pocketmine\world\format;
 
+use pocketmine\world\thread\Future;
+use pocketmine\world\format\io\ChunkData;
 use pocketmine\world\format\io\exception\CorruptedChunkException;
+use pocketmine\world\format\io\LoadedChunkData;
+use pocketmine\world\format\io\WorldData;
 
-interface WorldProvider{
+interface ThreadedWorldProvider{
 	/**
 	 * Returns the lowest buildable Y coordinate of this world
 	 */
@@ -36,43 +40,40 @@ interface WorldProvider{
 	 */
 	public function getWorldMaxY() : int;
 
-	public function getPath() : string;
-
 	/**
 	 * Loads a chunk (usually from disk storage) and returns it. If the chunk does not exist, null is returned.
 	 *
+	 * @return Future<LoadedChunkData|null>
 	 * @throws CorruptedChunkException
 	 */
-	public function loadChunk(int $chunkX, int $chunkZ) : ?LoadedChunkData;
+	public function loadChunk(int $chunkX, int $chunkZ) : Future;
 
 	/**
-	 * Performs garbage collection in the world provider, such as cleaning up regions in Region-based worlds.
+	 * Saves a chunk to disk storage.
+	 * @return Future<void>
 	 */
-	public function doGarbageCollection() : void;
+	public function saveChunk(int $chunkX, int $chunkZ, ChunkData $chunkData, int $dirtyFlags) : Future;
+	/**
+	 * Performs garbage collection in the world provider, such as cleaning up regions in Region-based worlds.
+	 * @return Future<void>
+	 */
+	public function doGarbageCollection() : Future;
 
 	/**
 	 * Returns information about the world
+	 * @return Future<WorldData>
 	 */
-	public function getWorldData() : WorldData;
+	public function getWorldData() : Future;
 
 	/**
-	 * Performs cleanups necessary when the world provider is closed and no longer needed.
+	 * @return Future<void>
 	 */
-	public function close() : void;
 
-	/**
-	 * Returns a generator which yields all the chunks in this world.
-	 *
-	 * @return \Generator|LoadedChunkData[]
-	 * @phpstan-return \Generator<array{int, int}, LoadedChunkData, void, void>
-	 * @throws CorruptedChunkException
-	 */
-	public function getAllChunks(bool $skipCorrupted = false, ?\Logger $logger = null) : \Generator;
+	public function reloadWorldData() : Future;
 
 	/**
 	 * Returns the number of chunks in the provider. Used for world conversion time estimations.
+	 * @return Future<void>
 	 */
-	public function calculateChunkCount() : int;
-
-	public function reloadWorldData() : void;
+	public function calculateChunkCount() : Future;
 }

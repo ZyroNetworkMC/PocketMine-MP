@@ -27,12 +27,15 @@ use pmmp\encoding\BE;
 use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
 use pocketmine\world\format\Chunk;
 use pocketmine\world\format\PalettedBlockArray;
 use pocketmine\world\format\SubChunk;
 use function array_values;
 use function count;
 use function pack;
+use function igbinary_serialize;
+use function igbinary_unserialize;
 use function strlen;
 use function unpack;
 
@@ -124,5 +127,69 @@ final class FastChunkSerializer{
 		}
 
 		return new Chunk($subChunks, $terrainPopulated);
+	}
+	public static function serializeChunkData(ChunkData $data) : string{
+		$writer = new ByteBufferWriter();
+		$subChunks = $data->getSubChunks();
+		$entityNBT = $data->getEntityNBT();
+		$tileNBT = $data->getTileNBT();
+		$populated = $data->isPopulated();
+
+		// count of subchunks
+		Byte::writeUnsigned($writer, count($subChunks));
+
+		foreach($subChunks as $y => $subChunk){
+			Byte::writeUnsigned($writer, $y);
+			BE::writeUnsignedInt($writer, $subChunk->getEmptyBlockId());
+			$layers = $subChunk->getBlockLayers();
+			Byte::writeUnsigned($writer, count($layers));
+			foreach($layers as $blocks){
+				self::serializePalettedArray($writer, $blocks);
+			}
+			self::serializePalettedArray($writer, $subChunk->getBiomeArray());
+		}
+
+		$str = igbinary_serialize([$entityNBT, $tileNBT, $populated]);
+		// write varint length then raw bytes
+		VarInt::writeUnsignedInt($writer, strlen($str));
+		$writer->writeByteArray($str);
+
+		return $writer->getData();
+	}
+
+	public static function deserializeChunkData(string $data) : ChunkData{
+		$reader = new ByteBufferReader($data);
+		$subChunks = [];
+
+		$count = Byte::readUnsigned($reader);
+
+		for($i = 0; $i < $count; $i++){
+			$y = Byte::readUnsigned($reader);
+			$emptyBlockId = BE::readUnsignedInt($reader);
+			$layerCount = Byte::readUnsigned($reader);
+			$layers = [];
+
+			for($j = 0; $j < $layerCount; $j++){
+				$layers[] = self::deserializePalettedArray($reader);
+			}
+
+			$biomeArray = self::deserializePalettedArray($reader);
+			$subChunks[$y] = new SubChunk($emptyBlockId, $layers, $biomeArray);
+		}
+
+		$strLen = VarInt::readUnsignedInt($reader);
+		$str = $reader->readByteArray($strLen);
+		[$entityNBT, $tileNBT, $populated] = igbinary_unserialize($str);
+
+		return new ChunkData($subChunks, $populated, $entityNBT, $tileNBT);
+	}
+
+	public static function serializeLoadedChunkData(LoadedChunkData $data) : string{
+		return igbinary_serialize([self::serializeChunkData($data->getData()), $data->isUpgraded(), $data->getFixerFlags()]);
+	}
+
+	public static function deserializeLoadedChunkData(string $data) : LoadedChunkData{
+		[$data, $upgraded, $flags] = igbinary_unserialize($data);
+		return new LoadedChunkData(self::deserializeChunkData($data), $upgraded, $flags);
 	}
 }
