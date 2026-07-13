@@ -73,6 +73,7 @@ enum RecordType{
 	case DISK_WARD;
 	case DISK_11;
 	case DISK_WAIT;
+	case DISK_BOUNCE;
 
 	/**
 	 * @phpstan-return TMetadata
@@ -101,7 +102,8 @@ enum RecordType{
 			self::DISK_STRAD => ["C418 - strad", KnownTranslationFactory::item_record_strad_desc()],
 			self::DISK_WARD => ["C418 - ward", KnownTranslationFactory::item_record_ward_desc()],
 			self::DISK_11 => ["C418 - 11", KnownTranslationFactory::item_record_11_desc()],
-			self::DISK_WAIT => ["C418 - wait", KnownTranslationFactory::item_record_wait_desc()]
+			self::DISK_WAIT => ["C418 - wait", KnownTranslationFactory::item_record_wait_desc()],
+			self::DISK_BOUNCE => ["Bounce", new Translatable("Record Bounce")]
 		};
 	}
 
