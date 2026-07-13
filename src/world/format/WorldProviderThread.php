@@ -60,11 +60,11 @@ use function iterator_to_array;
 use function trim;
 
 class WorldProviderThread extends Thread{
-	/** @var ThreadSafeArray<int, FutureResolver<mixed, mixed>> */
+	/** @var ThreadSafeArray<int, FutureResolver<array{0: string, 1: bool}, ?BaseThreadedWorldProvider>> */
 	private ThreadSafeArray $loadQueue;
-	/** @var ThreadSafeArray<int, FutureResolver<mixed, mixed>> */
+	/** @var ThreadSafeArray<int, FutureResolver<string, void>> */
 	private ThreadSafeArray $unloadQueue;
-	/** @var ThreadSafeArray<string, ThreadSafeArray<int, FutureResolver<mixed, mixed>>> */
+	/** @var ThreadSafeArray<string, ThreadSafeArray<int, FutureResolver<\Closure(WorldProvider): mixed, mixed>>> */
 	private ThreadSafeArray $transactionQueue;
 
 	private string $lang;
@@ -79,7 +79,9 @@ class WorldProviderThread extends Thread{
 	}
 
 	public function __construct(private string $dataPath){
-		$this->lang = igbinary_serialize(Server::getInstance()->getLanguage());
+		$langStr = igbinary_serialize(GlobalLogger::get()->getLanguage());
+		assert(is_string($langStr));
+		$this->lang = $langStr;
 		$this->loadQueue = new ThreadSafeArray();
 		$this->unloadQueue = new ThreadSafeArray();
 		$this->transactionQueue = new ThreadSafeArray();
@@ -167,6 +169,7 @@ class WorldProviderThread extends Thread{
 		GlobalLogger::set($this->logger);
 		/** @var WorldProvider[] $providers */
 		$providers = [];
+		/** @var \pocketmine\lang\Language $lang */
 		$lang = igbinary_unserialize($this->lang);
 		$mgr = new WorldProviderManager();
 
@@ -218,7 +221,12 @@ class WorldProviderThread extends Thread{
 					$folderName = $resolver->getContext();
 					assert(is_string($folderName));
 
-					if(!$this->isKilled && !empty($this->transactionQueue->synchronized(fn() => $this->transactionQueue[$folderName] ?? []))){
+					$hasTransactions = $this->transactionQueue->synchronized(function() use ($folderName) : bool{
+						$queue = $this->transactionQueue[$folderName] ?? null;
+						return $queue !== null && count($queue) > 0;
+					});
+
+					if(!$this->isKilled && $hasTransactions){
 						if(!isset($providers[$folderName])){
 							continue;
 						}
@@ -254,9 +262,12 @@ class WorldProviderThread extends Thread{
 							continue;
 						}
 
-						assert($resolver instanceof FutureResolver);
 						try{
-							$resolver->do(static fn() => $resolver->getContext()($provider));
+							$resolver->do(function() use ($resolver, $provider){
+								/** @var \Closure(WorldProvider): mixed $closure */
+								$closure = $resolver->getContext();
+								return $closure($provider);
+							});
 						}catch(Throwable $e){
 							$this->logger->critical("Failed to execute transaction for $world.");
 							$this->logger->logException($e);
@@ -266,6 +277,7 @@ class WorldProviderThread extends Thread{
 
 				$need = $this->transactionQueue->synchronized(function(){
 					foreach($this->transactionQueue as $queue){
+						assert($queue instanceof ThreadSafeArray);
 						if(count($queue) !== 0){
 							return true;
 						}
@@ -273,7 +285,7 @@ class WorldProviderThread extends Thread{
 					return false;
 				});
 
-				if(!$need && $this->unloadQueue->synchronized(fn() => empty($this->unloadQueue))){
+				if(!$need && $this->unloadQueue->synchronized(fn() => count($this->unloadQueue) === 0)){
 					$this->synchronized(function() : void{
 						if(!$this->isKilled){
 							$this->wait(1000);
