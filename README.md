@@ -70,6 +70,9 @@ New here? Check out [issues with the "Easy task" label](https://github.com/pmmp/
 
 Thanks for your support!
 
+## Credits
+This fork is built with respect with use of Atlas projects and its continued contribution to the Bedrock ecosystem <3
+
 ## Licensing information
 This project is licensed under LGPL-3.0. Please see the [LICENSE](/LICENSE) file for details.
 
