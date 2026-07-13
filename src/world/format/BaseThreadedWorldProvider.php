@@ -76,10 +76,13 @@ class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 	 * Saves a chunk (usually to disk).
 	 */
 	public function saveChunk(int $chunkX, int $chunkZ, ChunkData $chunkData, int $dirtyFlags) : Future{
-		$chunkData = igbinary_serialize($chunkData);
-		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) use ($chunkZ, $chunkX, $chunkData, $dirtyFlags){
+		$chunkDataStr = igbinary_serialize($chunkData);
+		assert(is_string($chunkDataStr));
+		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) use ($chunkZ, $chunkX, $chunkDataStr, $dirtyFlags) : void{
 			if($provider instanceof WritableWorldProvider){
-				$provider->saveChunk($chunkX, $chunkZ, igbinary_unserialize($chunkData), $dirtyFlags);
+				/** @var ChunkData $deserialized */
+				$deserialized = igbinary_unserialize($chunkDataStr);
+				$provider->saveChunk($chunkX, $chunkZ, $deserialized, $dirtyFlags);
 			}else{
 				throw new \RuntimeException("not saved");
 			}
@@ -93,7 +96,7 @@ class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 	}
 
 	public function doGarbageCollection() : Future{
-		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider){
+		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : void{
 			$provider->doGarbageCollection();
 		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}

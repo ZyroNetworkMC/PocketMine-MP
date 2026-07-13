@@ -73,7 +73,7 @@ interface ThreadedWorldProvider{
 
 	/**
 	 * Returns the number of chunks in the provider. Used for world conversion time estimations.
-	 * @return Future<void>
+	 * @return Future<int>
 	 */
 	public function calculateChunkCount() : Future;
 }

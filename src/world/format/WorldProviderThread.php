@@ -60,8 +60,11 @@ use function iterator_to_array;
 use function trim;
 
 class WorldProviderThread extends Thread{
+	/** @var ThreadSafeArray<int, FutureResolver<mixed, mixed>> */
 	private ThreadSafeArray $loadQueue;
+	/** @var ThreadSafeArray<int, FutureResolver<mixed, mixed>> */
 	private ThreadSafeArray $unloadQueue;
+	/** @var ThreadSafeArray<string, ThreadSafeArray<int, FutureResolver<mixed, mixed>>> */
 	private ThreadSafeArray $transactionQueue;
 
 	private string $lang;
@@ -330,7 +333,7 @@ class WorldProviderThread extends Thread{
 
 	/**
 	 * @template T
-	 * @param Closure():T $c
+	 * @param \Closure(WorldProvider):T $c
 	 *
 	 * @return Future<T>|null
 	 */
