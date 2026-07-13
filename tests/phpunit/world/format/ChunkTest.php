@@ -59,7 +59,7 @@ class ChunkTest extends TestCase{
 		self::assertSame($expected, $actual);
 	}
 
-	public function testUsage(): void {
+	public function testUsage() : void {
 		$chunk = new Chunk([], false);
 		$translator = TypeConverter::getInstance()->getBlockTranslator();
 
