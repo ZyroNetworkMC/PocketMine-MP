@@ -23,14 +23,16 @@ declare(strict_types=1);
 
 namespace pocketmine\world\format;
 
-use pocketmine\world\thread\Future;
 use pocketmine\world\format\io\ChunkData;
 use pocketmine\world\format\io\LoadedChunkData;
 use pocketmine\world\format\io\WorldData;
 use pocketmine\world\format\io\WorldProvider;
 use pocketmine\world\format\io\WritableWorldProvider;
+use pocketmine\world\thread\Future;
+use function assert;
 use function igbinary_serialize;
 use function igbinary_unserialize;
+use function is_string;
 
 class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 	public function __construct(
@@ -57,44 +59,47 @@ class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 	public function loadChunk(int $chunkX, int $chunkZ) : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) use ($chunkZ, $chunkX) : ?LoadedChunkData{
 			return $provider->loadChunk($chunkX, $chunkZ);
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function getWorldData() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : WorldData{
 			return $provider->getWorldData();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function calculateChunkCount() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : int{
 			return $provider->calculateChunkCount();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	/**
 	 * Saves a chunk (usually to disk).
 	 */
 	public function saveChunk(int $chunkX, int $chunkZ, ChunkData $chunkData, int $dirtyFlags) : Future{
-		$chunkData = igbinary_serialize($chunkData);
-		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) use ($chunkZ, $chunkX, $chunkData, $dirtyFlags){
+		$chunkDataStr = igbinary_serialize($chunkData);
+		assert(is_string($chunkDataStr));
+		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) use ($chunkZ, $chunkX, $chunkDataStr, $dirtyFlags) : void{
 			if($provider instanceof WritableWorldProvider){
-				$provider->saveChunk($chunkX, $chunkZ, igbinary_unserialize($chunkData), $dirtyFlags);
+				/** @var ChunkData $deserialized */
+				$deserialized = igbinary_unserialize($chunkDataStr);
+				$provider->saveChunk($chunkX, $chunkZ, $deserialized, $dirtyFlags);
 			}else{
 				throw new \RuntimeException("not saved");
 			}
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function reloadWorldData() : Future{
 		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : void{
 			$provider->reloadWorldData();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 
 	public function doGarbageCollection() : Future{
-		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider){
+		return WorldProviderThread::getInstance()->transaction($this->world, static function(WorldProvider $provider) : void{
 			$provider->doGarbageCollection();
-		});
+		}) ?? throw new \RuntimeException("World provider thread is not running");
 	}
 }

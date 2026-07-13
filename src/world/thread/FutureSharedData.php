@@ -56,7 +56,9 @@ class FutureSharedData extends ThreadSafe{
 	 */
 	public function getValue(){
 		if($this->value === null){
-			return null;
+			/** @var TReturn $nullRet */
+			$nullRet = null;
+			return $nullRet;
 		}
 		unset(FutureResolver::$neverDestruct[$this->resolver]);
 		return igbinary_unserialize($this->value);

@@ -23,11 +23,11 @@ declare(strict_types=1);
 
 namespace pocketmine\world\format;
 
-use pocketmine\world\thread\Future;
 use pocketmine\world\format\io\ChunkData;
 use pocketmine\world\format\io\exception\CorruptedChunkException;
 use pocketmine\world\format\io\LoadedChunkData;
 use pocketmine\world\format\io\WorldData;
+use pocketmine\world\thread\Future;
 
 interface ThreadedWorldProvider{
 	/**
@@ -73,7 +73,7 @@ interface ThreadedWorldProvider{
 
 	/**
 	 * Returns the number of chunks in the provider. Used for world conversion time estimations.
-	 * @return Future<void>
+	 * @return Future<int>
 	 */
 	public function calculateChunkCount() : Future;
 }

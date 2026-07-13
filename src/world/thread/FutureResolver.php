@@ -42,7 +42,7 @@ class FutureResolver extends ThreadSafe{
 	/**
 	 * @internal
 	 * @var FutureResolver[]
-	 * @phpstan-var array<int, FutureResolver>
+	 * @phpstan-var array<int, FutureResolver<mixed, mixed>>
 	 */
 	public static array $neverDestruct = [];
 
@@ -73,9 +73,16 @@ class FutureResolver extends ThreadSafe{
 	 */
 	public function getContext(){
 		if(is_string($this->context)){
-			return igbinary_unserialize($this->context);
+			/** @var TContext $res */
+			$res = igbinary_unserialize($this->context);
+			return $res;
 		}
-		return $this->context;
+		/**
+		 * @var TContext $res
+		 * @phpstan-ignore-next-line
+		 */
+		$res = $this->context;
+		return $res;
 	}
 
 	/**
@@ -100,7 +107,7 @@ class FutureResolver extends ThreadSafe{
 	}
 
 	/**
-	 * @param Closure():void $c
+	 * @param Closure():TReturn $c
 	 */
 	public function do(Closure $c) : void{
 		try{

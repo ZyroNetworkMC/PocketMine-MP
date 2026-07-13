@@ -28,8 +28,6 @@ use InvalidArgumentException;
 use pmmp\thread\ThreadSafeArray;
 use pocketmine\lang\KnownTranslationFactory;
 use pocketmine\lang\Language;
-use pocketmine\world\thread\Future;
-use pocketmine\world\thread\FutureResolver;
 use pocketmine\Server;
 use pocketmine\thread\log\ThreadSafeLogger;
 use pocketmine\thread\Thread;
@@ -43,6 +41,8 @@ use pocketmine\world\format\io\WorldProviderManager;
 use pocketmine\world\format\io\WritableWorldProvider;
 use pocketmine\world\generator\GeneratorManager;
 use pocketmine\world\generator\InvalidGeneratorOptionsException;
+use pocketmine\world\thread\Future;
+use pocketmine\world\thread\FutureResolver;
 use PrefixedLogger;
 use RuntimeException;
 use Symfony\Component\Filesystem\Path;
@@ -60,8 +60,11 @@ use function iterator_to_array;
 use function trim;
 
 class WorldProviderThread extends Thread{
+	/** @var ThreadSafeArray<int, FutureResolver<array{0: string, 1: bool}, ?BaseThreadedWorldProvider>> */
 	private ThreadSafeArray $loadQueue;
+	/** @var ThreadSafeArray<int, FutureResolver<string, void>> */
 	private ThreadSafeArray $unloadQueue;
+	/** @var ThreadSafeArray<string, ThreadSafeArray<int, FutureResolver<\Closure(WorldProvider): mixed, mixed>>> */
 	private ThreadSafeArray $transactionQueue;
 
 	private string $lang;
@@ -76,7 +79,9 @@ class WorldProviderThread extends Thread{
 	}
 
 	public function __construct(private string $dataPath){
-		$this->lang = igbinary_serialize(Server::getInstance()->getLanguage());
+		$langStr = igbinary_serialize(Server::getInstance()->getLanguage());
+		assert(is_string($langStr));
+		$this->lang = $langStr;
 		$this->loadQueue = new ThreadSafeArray();
 		$this->unloadQueue = new ThreadSafeArray();
 		$this->transactionQueue = new ThreadSafeArray();
@@ -164,13 +169,14 @@ class WorldProviderThread extends Thread{
 		GlobalLogger::set($this->logger);
 		/** @var WorldProvider[] $providers */
 		$providers = [];
+		/** @var Language $lang */
 		$lang = igbinary_unserialize($this->lang);
 		$mgr = new WorldProviderManager();
 
 		while(!$this->isKilled){
 			try{
 				while(($resolver = $this->lockedShift($this->loadQueue)) !== null){
-					/** @var FutureResolver<array{0:string,1:bool},void> $resolver */
+					/** @var FutureResolver<array{0:string,1:bool},?BaseThreadedWorldProvider> $resolver */
 					if($resolver->isCancelled()){
 						continue;
 					}
@@ -215,7 +221,12 @@ class WorldProviderThread extends Thread{
 					$folderName = $resolver->getContext();
 					assert(is_string($folderName));
 
-					if(!$this->isKilled && !empty($this->transactionQueue->synchronized(fn() => $this->transactionQueue[$folderName] ?? []))){
+					$hasTransactions = $this->transactionQueue->synchronized(function() use ($folderName) : bool{
+						$queue = $this->transactionQueue[$folderName] ?? null;
+						return $queue !== null && count($queue) > 0;
+					});
+
+					if($hasTransactions){
 						if(!isset($providers[$folderName])){
 							continue;
 						}
@@ -251,9 +262,12 @@ class WorldProviderThread extends Thread{
 							continue;
 						}
 
-						assert($resolver instanceof FutureResolver);
 						try{
-							$resolver->do(static fn() => $resolver->getContext()($provider));
+							$resolver->do(function() use ($resolver, $provider){
+								/** @var \Closure(WorldProvider): mixed $closure */
+								$closure = $resolver->getContext();
+								return $closure($provider);
+							});
 						}catch(Throwable $e){
 							$this->logger->critical("Failed to execute transaction for $world.");
 							$this->logger->logException($e);
@@ -263,6 +277,7 @@ class WorldProviderThread extends Thread{
 
 				$need = $this->transactionQueue->synchronized(function(){
 					foreach($this->transactionQueue as $queue){
+						assert($queue instanceof ThreadSafeArray);
 						if(count($queue) !== 0){
 							return true;
 						}
@@ -270,7 +285,7 @@ class WorldProviderThread extends Thread{
 					return false;
 				});
 
-				if(!$need && $this->unloadQueue->synchronized(fn() => empty($this->unloadQueue))){
+				if(!$need && $this->unloadQueue->synchronized(fn() => count($this->unloadQueue) === 0)){
 					$this->synchronized(function() : void{
 						if(!$this->isKilled){
 							$this->wait(1000);
@@ -294,10 +309,22 @@ class WorldProviderThread extends Thread{
 		}
 	}
 
+	/**
+	 * @template TContext
+	 * @template TReturn
+	 * @param ThreadSafeArray<int, FutureResolver<TContext, TReturn>> $queue
+	 * @return FutureResolver<TContext, TReturn>|null
+	 */
 	private function lockedShift(ThreadSafeArray $queue) : ?FutureResolver{
 		return $queue->synchronized(fn() => $queue->shift());
 	}
 
+	/**
+	 * @template TKey of array-key
+	 * @template TValue
+	 * @param ThreadSafeArray<TKey, TValue> $queue
+	 * @return array<TKey, TValue>
+	 */
 	private function lockedGetAll(ThreadSafeArray $queue) : array{
 		return $queue->synchronized(fn() => iterator_to_array($queue));
 	}
@@ -306,19 +333,22 @@ class WorldProviderThread extends Thread{
 	 * @return Future<ThreadedWorldProvider|null>
 	 */
 	public function register(string $folderName, bool $autoUpgrade = true) : Future{
+		/** @var FutureResolver<array{0: string, 1: bool}, ?BaseThreadedWorldProvider> $resolver */
 		$resolver = new FutureResolver([$folderName, $autoUpgrade]);
 		$this->logger->debug("Registering world provider for $folderName.");
 		$this->loadQueue->synchronized(fn() => $this->loadQueue[] = $resolver);
 		$this->synchronized(function() : void{
 			$this->notify();
 		});
+		/** @phpstan-ignore-next-line */
 		return $resolver->future();
 	}
 
 	/**
-	 * @return Future<ThreadedWorldProvider>
+	 * @return Future<void>
 	 */
 	public function unregister(string $folderName) : Future{
+		/** @var FutureResolver<string, void> $resolver */
 		$resolver = new FutureResolver($folderName);
 		$this->logger->debug("Unregistering world provider for $folderName.");
 		$this->unloadQueue->synchronized(fn() => $this->unloadQueue[] = $resolver);
@@ -330,7 +360,7 @@ class WorldProviderThread extends Thread{
 
 	/**
 	 * @template T
-	 * @param Closure():T $c
+	 * @param \Closure(WorldProvider):T $c
 	 *
 	 * @return Future<T>|null
 	 */
@@ -339,7 +369,9 @@ class WorldProviderThread extends Thread{
 			if(!isset($this->transactionQueue[$world])){
 				return null;
 			}
+			/** @var FutureResolver<\Closure(WorldProvider): T, T> $resolver */
 			$resolver = new FutureResolver($c);
+			/** @phpstan-ignore-next-line */
 			$this->transactionQueue[$world][] = $resolver;
 			$this->synchronized(function() : void{
 				$this->notify();
