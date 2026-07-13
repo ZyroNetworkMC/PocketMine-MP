@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "43b2298cca1bf8dc7aebd21cb8d1f587",
+    "content-hash": "64973beff262d63e989f4f964309c7c4",
     "packages": [
         {
             "name": "adhocore/json-comment",
@@ -67,25 +67,24 @@
         },
         {
             "name": "brick/math",
-            "version": "0.13.1",
+            "version": "0.18.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/brick/math.git",
-                "reference": "fc7ed316430118cc7836bf45faff18d5dfc8de04"
+                "reference": "82944324d1c1bdb2c2618e89978d4e2ad78d69ad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/brick/math/zipball/fc7ed316430118cc7836bf45faff18d5dfc8de04",
-                "reference": "fc7ed316430118cc7836bf45faff18d5dfc8de04",
+                "url": "https://api.github.com/repos/brick/math/zipball/82944324d1c1bdb2c2618e89978d4e2ad78d69ad",
+                "reference": "82944324d1c1bdb2c2618e89978d4e2ad78d69ad",
                 "shasum": ""
             },
             "require": {
-                "php": "^8.1"
+                "php": "^8.2"
             },
             "require-dev": {
-                "php-coveralls/php-coveralls": "^2.2",
-                "phpunit/phpunit": "^10.1",
-                "vimeo/psalm": "6.8.8"
+                "phpstan/phpstan": "2.1.22",
+                "phpunit/phpunit": "^11.5"
             },
             "type": "library",
             "autoload": {
@@ -115,7 +114,7 @@
             ],
             "support": {
                 "issues": "https://github.com/brick/math/issues",
-                "source": "https://github.com/brick/math/tree/0.13.1"
+                "source": "https://github.com/brick/math/tree/0.18.0"
             },
             "funding": [
                 {
@@ -123,7 +122,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-03-29T13:50:30+00:00"
+            "time": "2026-06-14T18:21:03+00:00"
         },
         {
             "name": "netresearch/jsonmapper",
@@ -178,94 +177,88 @@
         },
         {
             "name": "pocketmine/bedrock-block-upgrade-schema",
-            "version": "5.2.0",
+            "version": "1.26.40",
             "source": {
                 "type": "git",
-                "url": "https://github.com/pmmp/BedrockBlockUpgradeSchema.git",
-                "reference": "5d7889c9a1cdf9e3cd814d2a104ad69b75116ec7"
+                "url": "https://github.com/ZyroNetworkMC/BedrockBlockUpgradeSchema.git",
+                "reference": "abcfb27df7a60d8bf889ba3ddc62cd78774e55ab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pmmp/BedrockBlockUpgradeSchema/zipball/5d7889c9a1cdf9e3cd814d2a104ad69b75116ec7",
-                "reference": "5d7889c9a1cdf9e3cd814d2a104ad69b75116ec7",
+                "url": "https://api.github.com/repos/ZyroNetworkMC/BedrockBlockUpgradeSchema/zipball/abcfb27df7a60d8bf889ba3ddc62cd78774e55ab",
+                "reference": "abcfb27df7a60d8bf889ba3ddc62cd78774e55ab",
                 "shasum": ""
             },
             "type": "library",
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "CC0-1.0"
             ],
             "description": "Schemas describing how to upgrade saved block data in older Minecraft: Bedrock Edition world saves",
             "support": {
-                "issues": "https://github.com/pmmp/BedrockBlockUpgradeSchema/issues",
-                "source": "https://github.com/pmmp/BedrockBlockUpgradeSchema/tree/5.2.0"
+                "source": "https://github.com/ZyroNetworkMC/BedrockBlockUpgradeSchema/tree/1.26.40"
             },
-            "time": "2025-10-02T13:22:10+00:00"
+            "time": "2026-07-13T12:44:32+00:00"
         },
         {
             "name": "pocketmine/bedrock-data",
-            "version": "6.7.0+bedrock-1.26.30",
+            "version": "1.26.40",
             "source": {
                 "type": "git",
-                "url": "https://github.com/pmmp/BedrockData.git",
-                "reference": "bdb44a48fb6beffb6e9f6864f06d2232eb62b6a3"
+                "url": "https://github.com/ZyroNetworkMC/BedrockData.git",
+                "reference": "1bbd24ab7b3a316739da6851ec1483e4bf6dbbfd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pmmp/BedrockData/zipball/bdb44a48fb6beffb6e9f6864f06d2232eb62b6a3",
-                "reference": "bdb44a48fb6beffb6e9f6864f06d2232eb62b6a3",
+                "url": "https://api.github.com/repos/ZyroNetworkMC/BedrockData/zipball/1bbd24ab7b3a316739da6851ec1483e4bf6dbbfd",
+                "reference": "1bbd24ab7b3a316739da6851ec1483e4bf6dbbfd",
                 "shasum": ""
             },
             "type": "library",
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "CC0-1.0"
             ],
-            "description": "Blobs of data generated from Minecraft: Bedrock Edition, used by PocketMine-MP",
+            "description": "Blobs of data generated from Minecraft: Bedrock Edition, used by Altayz",
             "support": {
-                "issues": "https://github.com/pmmp/BedrockData/issues",
-                "source": "https://github.com/pmmp/BedrockData/tree/bedrock-1.26.30"
+                "source": "https://github.com/ZyroNetworkMC/BedrockData/tree/1.26.40"
             },
-            "time": "2026-06-22T19:41:55+00:00"
+            "time": "2026-07-13T12:44:38+00:00"
         },
         {
             "name": "pocketmine/bedrock-item-upgrade-schema",
-            "version": "1.17.0",
+            "version": "1.26.40",
             "source": {
                 "type": "git",
-                "url": "https://github.com/pmmp/BedrockItemUpgradeSchema.git",
-                "reference": "e19685d2e7e76eb7446115c556df34e5d627d072"
+                "url": "https://github.com/ZyroNetworkMC/BedrockItemUpgradeSchema.git",
+                "reference": "d897d294692b1728970591c7a3e35318ac729820"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pmmp/BedrockItemUpgradeSchema/zipball/e19685d2e7e76eb7446115c556df34e5d627d072",
-                "reference": "e19685d2e7e76eb7446115c556df34e5d627d072",
+                "url": "https://api.github.com/repos/ZyroNetworkMC/BedrockItemUpgradeSchema/zipball/d897d294692b1728970591c7a3e35318ac729820",
+                "reference": "d897d294692b1728970591c7a3e35318ac729820",
                 "shasum": ""
             },
             "type": "library",
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "CC0-1.0"
             ],
             "description": "JSON schemas for upgrading items found in older Minecraft: Bedrock world saves",
             "support": {
-                "issues": "https://github.com/pmmp/BedrockItemUpgradeSchema/issues",
-                "source": "https://github.com/pmmp/BedrockItemUpgradeSchema/tree/1.17.0"
+                "source": "https://github.com/ZyroNetworkMC/BedrockItemUpgradeSchema/tree/1.26.40"
             },
-            "time": "2026-05-06T13:12:04+00:00"
+            "time": "2026-07-13T12:44:45+00:00"
         },
         {
             "name": "pocketmine/bedrock-protocol",
-            "version": "58.0.1+bedrock-1.26.30",
+            "version": "1.26.40",
             "source": {
                 "type": "git",
-                "url": "https://github.com/pmmp/BedrockProtocol.git",
-                "reference": "8eb5a390a8d913ee54b97ac71f42899ecbb5c419"
+                "url": "https://github.com/ZyroNetworkMC/BedrockProtocol.git",
+                "reference": "a8cada917a6bd970cd10fa3ca3471dd4a3b2234e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pmmp/BedrockProtocol/zipball/8eb5a390a8d913ee54b97ac71f42899ecbb5c419",
-                "reference": "8eb5a390a8d913ee54b97ac71f42899ecbb5c419",
+                "url": "https://api.github.com/repos/ZyroNetworkMC/BedrockProtocol/zipball/a8cada917a6bd970cd10fa3ca3471dd4a3b2234e",
+                "reference": "a8cada917a6bd970cd10fa3ca3471dd4a3b2234e",
                 "shasum": ""
             },
             "require": {
@@ -279,6 +272,7 @@
                 "ramsey/uuid": "^4.1"
             },
             "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.92",
                 "phpstan/phpstan": "2.1.0",
                 "phpstan/phpstan-phpunit": "^2.0.0",
                 "phpstan/phpstan-strict-rules": "^2.0.0",
@@ -290,16 +284,24 @@
                     "pocketmine\\network\\mcpe\\protocol\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "pocketmine\\network\\mcpe\\protocol\\": "tests/phpunit/"
+                }
+            },
+            "scripts": {
+                "update-create-methods": [
+                    "@php tools/generate-create-static-methods.php"
+                ]
+            },
             "license": [
                 "LGPL-3.0"
             ],
             "description": "An implementation of the Minecraft: Bedrock Edition protocol in PHP",
             "support": {
-                "issues": "https://github.com/pmmp/BedrockProtocol/issues",
-                "source": "https://github.com/pmmp/BedrockProtocol/tree/58.0.1+bedrock-1.26.30"
+                "source": "https://github.com/ZyroNetworkMC/BedrockProtocol/tree/1.26.40"
             },
-            "time": "2026-07-05T17:46:09+00:00"
+            "time": "2026-07-13T12:44:51+00:00"
         },
         {
             "name": "pocketmine/binaryutils",

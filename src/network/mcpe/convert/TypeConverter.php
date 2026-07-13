@@ -27,6 +27,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pocketmine\block\tile\Container;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\crafting\ComplexAliasRecipeIngredient;
 use pocketmine\crafting\ExactRecipeIngredient;
 use pocketmine\crafting\MetaWildcardRecipeIngredient;
 use pocketmine\crafting\RecipeIngredient;
@@ -48,11 +49,11 @@ use pocketmine\nbt\UnexpectedTagTypeException;
 use pocketmine\network\mcpe\protocol\serializer\ItemTypeDictionary;
 use pocketmine\network\mcpe\protocol\types\GameMode as ProtocolGameMode;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
+use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackExtraData;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackExtraDataShield;
-use pocketmine\network\mcpe\protocol\types\recipe\IntIdMetaItemDescriptor;
+use pocketmine\network\mcpe\protocol\types\recipe\NameItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\RecipeIngredient as ProtocolRecipeIngredient;
-use pocketmine\network\mcpe\protocol\types\recipe\StringIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\TagItemDescriptor;
 use pocketmine\player\GameMode;
 use pocketmine\utils\AssumptionFailedError;
@@ -83,14 +84,17 @@ class TypeConverter{
 		//TODO: inject stuff via constructor
 		$this->blockItemIdMap = BlockItemIdMap::getInstance();
 
-		$canonicalBlockStatesRaw = Filesystem::fileGetContents(BedrockDataFiles::CANONICAL_BLOCK_STATES_NBT);
+		$blockPaletteRaw = Filesystem::fileGetContents(BedrockDataFiles::BLOCK_PALETTE_NBT);
 		$metaMappingRaw = Filesystem::fileGetContents(BedrockDataFiles::BLOCK_STATE_META_MAP_JSON);
 		$this->blockTranslator = new BlockTranslator(
-			BlockStateDictionary::loadFromString($canonicalBlockStatesRaw, $metaMappingRaw),
+			BlockStateDictionary::loadFromString($blockPaletteRaw, $metaMappingRaw),
 			GlobalBlockStateHandlers::getSerializer()
 		);
 
-		$this->itemTypeDictionary = ItemTypeDictionaryFromDataHelper::loadFromString(Filesystem::fileGetContents(BedrockDataFiles::REQUIRED_ITEM_LIST_JSON));
+		$this->itemTypeDictionary = ItemTypeDictionaryFromDataHelper::loadFromString(
+			Filesystem::fileGetContents(BedrockDataFiles::ITEM_PALETTE_JSON),
+			Filesystem::fileGetContents(BedrockDataFiles::ITEM_COMPONENTS_NBT)
+		);
 		$this->shieldRuntimeId = $this->itemTypeDictionary->fromStringId(ItemTypeNames::SHIELD);
 
 		$this->itemTranslator = new ItemTranslator(
@@ -147,9 +151,7 @@ class TypeConverter{
 			return new ProtocolRecipeIngredient(null, 0);
 		}
 		if($ingredient instanceof MetaWildcardRecipeIngredient){
-			$id = $this->itemTypeDictionary->fromStringId($ingredient->getItemId());
-			$meta = self::RECIPE_INPUT_WILDCARD_META;
-			$descriptor = new IntIdMetaItemDescriptor($id, $meta);
+			$descriptor = new NameItemDescriptor($ingredient->getItemId(), self::RECIPE_INPUT_WILDCARD_META);
 		}elseif($ingredient instanceof ExactRecipeIngredient){
 			$item = $ingredient->getItem();
 			[$id, $meta, $blockRuntimeId] = $this->itemTranslator->toNetworkId($item);
@@ -159,9 +161,11 @@ class TypeConverter{
 					throw new AssumptionFailedError("Every block state should have an associated meta value");
 				}
 			}
-			$descriptor = new IntIdMetaItemDescriptor($id, $meta);
+			$descriptor = new NameItemDescriptor($this->itemTypeDictionary->fromIntId($id), $meta);
 		}elseif($ingredient instanceof TagWildcardRecipeIngredient){
 			$descriptor = new TagItemDescriptor($ingredient->getTagName());
+		}elseif($ingredient instanceof ComplexAliasRecipeIngredient){
+			$descriptor = new NameItemDescriptor($ingredient->getAliasName(), self::RECIPE_INPUT_WILDCARD_META);
 		}else{
 			throw new \LogicException("Unsupported recipe ingredient type " . get_class($ingredient) . ", only " . ExactRecipeIngredient::class . " and " . MetaWildcardRecipeIngredient::class . " are supported");
 		}
@@ -179,12 +183,9 @@ class TypeConverter{
 			return new TagWildcardRecipeIngredient($descriptor->getTag());
 		}
 
-		if($descriptor instanceof IntIdMetaItemDescriptor){
-			$stringId = $this->itemTypeDictionary->fromIntId($descriptor->getId());
-			$meta = $descriptor->getMeta();
-		}elseif($descriptor instanceof StringIdMetaItemDescriptor){
-			$stringId = $descriptor->getId();
-			$meta = $descriptor->getMeta();
+		if($descriptor instanceof NameItemDescriptor){
+			$stringId = $descriptor->getName();
+			$meta = $descriptor->getAuxValue();
 		}else{
 			throw new \LogicException("Unsupported conversion of recipe ingredient to core item stack");
 		}
@@ -284,6 +285,10 @@ class TypeConverter{
 			$tag->setByteArray(self::PM_FULL_NBT_HASH_TAG, $this->hashNBT($original));
 		}
 		return $tag;
+	}
+
+	public static function legacyItemStackWrapper(ItemStack $itemStack) : ItemStackWrapper{
+		return new ItemStackWrapper($itemStack->getId() === 0 ? 0 : 1, $itemStack);
 	}
 
 	public function coreItemStackToNet(Item $itemStack) : ItemStack{

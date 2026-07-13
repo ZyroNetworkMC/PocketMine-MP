@@ -23,8 +23,10 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\handler;
 
+use pocketmine\block\Anvil;
 use pocketmine\block\BaseSign;
 use pocketmine\block\Lectern;
+use pocketmine\block\VanillaBlocks;
 use pocketmine\block\tile\Sign;
 use pocketmine\block\utils\SignText;
 use pocketmine\entity\Attribute;
@@ -50,6 +52,7 @@ use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\ActorPickRequestPacket;
 use pocketmine\network\mcpe\protocol\AnimatePacket;
+use pocketmine\network\mcpe\protocol\AnvilDamagePacket;
 use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\BlockPickRequestPacket;
 use pocketmine\network\mcpe\protocol\BookEditPacket;
@@ -90,7 +93,6 @@ use pocketmine\network\mcpe\protocol\types\inventory\UseItemOnEntityTransactionD
 use pocketmine\network\mcpe\protocol\types\inventory\UseItemTransactionData;
 use pocketmine\network\mcpe\protocol\types\PlayerAction;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
-use pocketmine\network\mcpe\protocol\types\PlayerBlockActionStopBreak;
 use pocketmine\network\mcpe\protocol\types\PlayerBlockActionWithBlockInfo;
 use pocketmine\network\PacketHandlingException;
 use pocketmine\player\Player;
@@ -99,6 +101,8 @@ use pocketmine\utils\Limits;
 use pocketmine\utils\TextFormat;
 use pocketmine\utils\Utils;
 use pocketmine\world\format\Chunk;
+use pocketmine\world\sound\AnvilBreakSound;
+use pocketmine\world\sound\AnvilUseSound;
 use function array_push;
 use function count;
 use function fmod;
@@ -280,9 +284,7 @@ class InGamePacketHandler extends PacketHandler{
 			}
 			foreach(Utils::promoteKeys($blockActions) as $k => $blockAction){
 				$actionHandled = false;
-				if($blockAction instanceof PlayerBlockActionStopBreak){
-					$actionHandled = $this->handlePlayerActionFromData($blockAction->getActionType(), new BlockPosition(0, 0, 0), Facing::DOWN);
-				}elseif($blockAction instanceof PlayerBlockActionWithBlockInfo){
+				if($blockAction instanceof PlayerBlockActionWithBlockInfo){
 					$actionHandled = $this->handlePlayerActionFromData($blockAction->getActionType(), $blockAction->getBlockPosition(), $blockAction->getFace());
 				}
 
@@ -303,29 +305,33 @@ class InGamePacketHandler extends PacketHandler{
 
 	public function handleInventoryTransaction(InventoryTransactionPacket $packet) : bool{
 		$result = true;
+		$trData = $packet->trData;
+		if($trData === null){
+			throw new PacketHandlingException("Inventory transaction data is missing");
+		}
 
-		if(count($packet->trData->getActions()) > 50){
+		if(count($trData->getActions()) > 50){
 			throw new PacketHandlingException("Too many actions in inventory transaction");
 		}
-		if($packet->requestChangedSlots !== null && count($packet->requestChangedSlots) > 10){
+		if(count($packet->requestChangedSlots) > 10){
 			throw new PacketHandlingException("Too many slot sync requests in inventory transaction");
 		}
 
 		$this->inventoryManager->setCurrentItemStackRequestId($packet->requestId);
-		$this->inventoryManager->addRawPredictedSlotChanges($packet->trData->getActions());
+		$this->inventoryManager->addRawPredictedSlotChanges($trData->getActions());
 
-		if($packet->trData instanceof NormalTransactionData){
-			$result = $this->handleNormalTransaction($packet->trData, $packet->requestId);
-		}elseif($packet->trData instanceof MismatchTransactionData){
+		if($trData instanceof NormalTransactionData){
+			$result = $this->handleNormalTransaction($trData, $packet->requestId);
+		}elseif($trData instanceof MismatchTransactionData){
 			$this->session->getLogger()->debug("Mismatch transaction received");
 			$this->inventoryManager->requestSyncAll();
 			$result = true;
-		}elseif($packet->trData instanceof UseItemTransactionData){
-			$result = $this->handleUseItemTransaction($packet->trData);
-		}elseif($packet->trData instanceof UseItemOnEntityTransactionData){
-			$result = $this->handleUseItemOnEntityTransaction($packet->trData);
-		}elseif($packet->trData instanceof ReleaseItemTransactionData){
-			$result = $this->handleReleaseItemTransaction($packet->trData);
+		}elseif($trData instanceof UseItemTransactionData){
+			$result = $this->handleUseItemTransaction($trData);
+		}elseif($trData instanceof UseItemOnEntityTransactionData){
+			$result = $this->handleUseItemOnEntityTransaction($trData);
+		}elseif($trData instanceof ReleaseItemTransactionData){
+			$result = $this->handleReleaseItemTransaction($trData);
 		}
 
 		$this->inventoryManager->syncMismatchedPredictedSlotChanges();
@@ -334,14 +340,12 @@ class InGamePacketHandler extends PacketHandler{
 		//haven't changed. Handling these is necessary to ensure the client inventory stays in sync if the server
 		//rejects the transaction. The most common example of this is equipping armor by right-click, which doesn't send
 		//a legacy prediction action for the destination armor slot.
-		if($packet->requestChangedSlots !== null){
-			foreach($packet->requestChangedSlots as $containerInfo){
-				foreach($containerInfo->getChangedSlotIndexes() as $netSlot){
-					[$windowId, $slot] = ItemStackContainerIdTranslator::translate($containerInfo->getContainerId(), $this->inventoryManager->getCurrentWindowId(), $netSlot);
-					$inventoryAndSlot = $this->inventoryManager->locateWindowAndSlot($windowId, $slot);
-					if($inventoryAndSlot !== null){ //trigger the normal slot sync logic
-						$this->inventoryManager->onSlotChange($inventoryAndSlot[0], $inventoryAndSlot[1]);
-					}
+		foreach($packet->requestChangedSlots as $containerInfo){
+			foreach($containerInfo->getChangedSlotIndexes() as $netSlot){
+				[$windowId, $slot] = ItemStackContainerIdTranslator::translate($containerInfo->getContainerId(), $this->inventoryManager->getCurrentWindowId(), $netSlot);
+				$inventoryAndSlot = $this->inventoryManager->locateWindowAndSlot($windowId, $slot);
+				if($inventoryAndSlot !== null){ //trigger the normal slot sync logic
+					$this->inventoryManager->onSlotChange($inventoryAndSlot[0], $inventoryAndSlot[1]);
 				}
 			}
 		}
@@ -803,6 +807,33 @@ class InGamePacketHandler extends PacketHandler{
 		}
 
 		return false;
+	}
+
+	public function handleAnvilDamage(AnvilDamagePacket $packet) : bool{
+		$pos = new Vector3($packet->getBlockPosition()->getX(), $packet->getBlockPosition()->getY(), $packet->getBlockPosition()->getZ());
+		if($pos->distanceSquared($this->player->getLocation()) > 10000){
+			return false;
+		}
+
+		$world = $this->player->getLocation()->getWorld();
+		$block = $world->getBlock($pos);
+		if(!($block instanceof Anvil)){
+			return false;
+		}
+
+		if(Utils::getRandomFloat() >= 0.12){
+			return true;
+		}
+
+		if($block->getDamage() >= Anvil::VERY_DAMAGED){
+			$world->setBlock($pos, VanillaBlocks::AIR());
+			$world->addSound($pos, new AnvilBreakSound());
+		}else{
+			$world->setBlock($pos, $block->setDamage($block->getDamage() + 1));
+			$world->addSound($pos, new AnvilUseSound());
+		}
+
+		return true;
 	}
 
 	public function handleSetPlayerGameType(SetPlayerGameTypePacket $packet) : bool{
