@@ -24,6 +24,9 @@ declare(strict_types=1);
 namespace pocketmine\world\format;
 
 use PHPUnit\Framework\TestCase;
+use pocketmine\network\mcpe\convert\TypeConverter;
+use pocketmine\network\mcpe\protocol\types\DimensionIds;
+use pocketmine\network\mcpe\serializer\ChunkSerializer;
 
 class ChunkTest extends TestCase{
 
@@ -41,5 +44,14 @@ class ChunkTest extends TestCase{
 		self::assertNotSame($chunk->getBlockStateId(0, 0, 0), $chunk2->getBlockStateId(0, 0, 0));
 		self::assertNotSame($chunk->getBiomeId(0, 0, 0), $chunk2->getBiomeId(0, 0, 0));
 		self::assertNotSame($chunk->getHeightMap(0, 0), $chunk2->getHeightMap(0, 0));
+	}
+
+	public function testSerializeSubChunkCount() : void{
+		$chunk = new Chunk([], false);
+		$translator = TypeConverter::getInstance()->getBlockTranslator();
+		$expected = ChunkSerializer::serializeFullChunk($chunk, DimensionIds::OVERWORLD, $translator);
+		$actual = ChunkSerializer::serializeFullChunk($chunk, DimensionIds::OVERWORLD, $translator, null, ChunkSerializer::getSubChunkCount($chunk, DimensionIds::OVERWORLD));
+
+		self::assertSame($expected, $actual);
 	}
 }

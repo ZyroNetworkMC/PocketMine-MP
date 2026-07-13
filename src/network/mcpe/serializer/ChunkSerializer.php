@@ -83,10 +83,10 @@ final class ChunkSerializer{
 	/**
 	 * @phpstan-param DimensionIds::* $dimensionId
 	 */
-	public static function serializeFullChunk(Chunk $chunk, int $dimensionId, BlockTranslator $blockTranslator, ?string $tiles = null) : string{
+	public static function serializeFullChunk(Chunk $chunk, int $dimensionId, BlockTranslator $blockTranslator, ?string $tiles = null, ?int $subChunkCount = null) : string{
 		$stream = new ByteBufferWriter();
 
-		$subChunkCount = self::getSubChunkCount($chunk, $dimensionId);
+		$subChunkCount ??= self::getSubChunkCount($chunk, $dimensionId);
 		$writtenCount = 0;
 
 		[$minSubChunkIndex, $maxSubChunkIndex] = self::getDimensionChunkBounds($dimensionId);
