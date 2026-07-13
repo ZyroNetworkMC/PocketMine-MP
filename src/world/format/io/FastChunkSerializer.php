@@ -196,7 +196,7 @@ final class FastChunkSerializer{
 	}
 
 	public static function deserializeLoadedChunkData(string $data) : LoadedChunkData{
-		/** @var array{0: string, 1: bool, 2: array<string, int>} $arr */
+		/** @var array{0: string, 1: bool, 2: int} $arr */
 		$arr = igbinary_unserialize($data);
 		[$data, $upgraded, $flags] = $arr;
 		return new LoadedChunkData(self::deserializeChunkData($data), $upgraded, $flags);

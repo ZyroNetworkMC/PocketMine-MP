@@ -176,7 +176,7 @@ class WorldProviderThread extends Thread{
 		while(!$this->isKilled){
 			try{
 				while(($resolver = $this->lockedShift($this->loadQueue)) !== null){
-					/** @var FutureResolver<array{0:string,1:bool},?ThreadedWorldProvider> $resolver */
+					/** @var FutureResolver<array{0:string,1:bool},?BaseThreadedWorldProvider> $resolver */
 					if($resolver->isCancelled()){
 						continue;
 					}
@@ -333,13 +333,14 @@ class WorldProviderThread extends Thread{
 	 * @return Future<ThreadedWorldProvider|null>
 	 */
 	public function register(string $folderName, bool $autoUpgrade = true) : Future{
-		/** @var FutureResolver<array{0: string, 1: bool}, ?ThreadedWorldProvider> $resolver */
+		/** @var FutureResolver<array{0: string, 1: bool}, ?BaseThreadedWorldProvider> $resolver */
 		$resolver = new FutureResolver([$folderName, $autoUpgrade]);
 		$this->logger->debug("Registering world provider for $folderName.");
 		$this->loadQueue->synchronized(fn() => $this->loadQueue[] = $resolver);
 		$this->synchronized(function() : void{
 			$this->notify();
 		});
+		/** @phpstan-ignore-next-line */
 		return $resolver->future();
 	}
 
@@ -370,6 +371,7 @@ class WorldProviderThread extends Thread{
 			}
 			/** @var FutureResolver<\Closure(WorldProvider): T, T> $resolver */
 			$resolver = new FutureResolver($c);
+			/** @phpstan-ignore-next-line */
 			$this->transactionQueue[$world][] = $resolver;
 			$this->synchronized(function() : void{
 				$this->notify();

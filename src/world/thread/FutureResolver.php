@@ -77,7 +77,10 @@ class FutureResolver extends ThreadSafe{
 			$res = igbinary_unserialize($this->context);
 			return $res;
 		}
-		/** @var TContext $res */
+		/**
+		 * @var TContext $res
+		 * @phpstan-ignore-next-line
+		 */
 		$res = $this->context;
 		return $res;
 	}
