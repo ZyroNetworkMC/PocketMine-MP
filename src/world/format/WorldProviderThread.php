@@ -79,7 +79,7 @@ class WorldProviderThread extends Thread{
 	}
 
 	public function __construct(private string $dataPath){
-		$langStr = igbinary_serialize(GlobalLogger::get()->getLanguage());
+		$langStr = igbinary_serialize(Server::getInstance()->getLanguage());
 		assert(is_string($langStr));
 		$this->lang = $langStr;
 		$this->loadQueue = new ThreadSafeArray();
@@ -176,7 +176,7 @@ class WorldProviderThread extends Thread{
 		while(!$this->isKilled){
 			try{
 				while(($resolver = $this->lockedShift($this->loadQueue)) !== null){
-					/** @var FutureResolver<array{0:string,1:bool},void> $resolver */
+					/** @var FutureResolver<array{0:string,1:bool},?ThreadedWorldProvider> $resolver */
 					if($resolver->isCancelled()){
 						continue;
 					}
@@ -226,7 +226,7 @@ class WorldProviderThread extends Thread{
 						return $queue !== null && count($queue) > 0;
 					});
 
-					if(!$this->isKilled && $hasTransactions){
+					if($hasTransactions){
 						if(!isset($providers[$folderName])){
 							continue;
 						}
@@ -333,7 +333,7 @@ class WorldProviderThread extends Thread{
 	 * @return Future<ThreadedWorldProvider|null>
 	 */
 	public function register(string $folderName, bool $autoUpgrade = true) : Future{
-		/** @var FutureResolver<array{0: string, 1: bool}, ?BaseThreadedWorldProvider> $resolver */
+		/** @var FutureResolver<array{0: string, 1: bool}, ?ThreadedWorldProvider> $resolver */
 		$resolver = new FutureResolver([$folderName, $autoUpgrade]);
 		$this->logger->debug("Registering world provider for $folderName.");
 		$this->loadQueue->synchronized(fn() => $this->loadQueue[] = $resolver);
@@ -344,7 +344,7 @@ class WorldProviderThread extends Thread{
 	}
 
 	/**
-	 * @return Future<ThreadedWorldProvider>
+	 * @return Future<void>
 	 */
 	public function unregister(string $folderName) : Future{
 		/** @var FutureResolver<string, void> $resolver */
@@ -368,6 +368,7 @@ class WorldProviderThread extends Thread{
 			if(!isset($this->transactionQueue[$world])){
 				return null;
 			}
+			/** @var FutureResolver<\Closure(WorldProvider): T, T> $resolver */
 			$resolver = new FutureResolver($c);
 			$this->transactionQueue[$world][] = $resolver;
 			$this->synchronized(function() : void{
