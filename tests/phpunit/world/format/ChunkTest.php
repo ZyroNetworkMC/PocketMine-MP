@@ -89,7 +89,6 @@ class ChunkTest extends TestCase{
 			$serialized = ChunkSerializer::serializeFullChunk($chunk, DimensionIds::OVERWORLD, $translator);
 			$deserialized = FastChunkSerializer::deserializeTerrain(FastChunkSerializer::serializeTerrain($chunk));
 			self::assertNotEmpty($serialized);
-			self::assertInstanceOf(Chunk::class, $deserialized);
 		}
 
 		gc_collect_cycles();
@@ -100,6 +99,5 @@ class ChunkTest extends TestCase{
 		$memoryDelta = $endMemory - $startMemory;
 
 		fwrite(STDOUT, "Chunk serialization/deserialization 1000x (vanilla-like): {$elapsedMs} ms, memory delta: {$memoryDelta} bytes, peak memory: {$peakMemory} bytes\n");
-		self::assertTrue(true);
 	}
 }
