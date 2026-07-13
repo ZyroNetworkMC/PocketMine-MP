@@ -33,9 +33,9 @@ use pocketmine\world\format\PalettedBlockArray;
 use pocketmine\world\format\SubChunk;
 use function array_values;
 use function count;
-use function pack;
 use function igbinary_serialize;
 use function igbinary_unserialize;
+use function pack;
 use function strlen;
 use function unpack;
 

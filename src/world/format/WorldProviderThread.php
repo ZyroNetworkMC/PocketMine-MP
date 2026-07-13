@@ -28,8 +28,6 @@ use InvalidArgumentException;
 use pmmp\thread\ThreadSafeArray;
 use pocketmine\lang\KnownTranslationFactory;
 use pocketmine\lang\Language;
-use pocketmine\world\thread\Future;
-use pocketmine\world\thread\FutureResolver;
 use pocketmine\Server;
 use pocketmine\thread\log\ThreadSafeLogger;
 use pocketmine\thread\Thread;
@@ -43,6 +41,8 @@ use pocketmine\world\format\io\WorldProviderManager;
 use pocketmine\world\format\io\WritableWorldProvider;
 use pocketmine\world\generator\GeneratorManager;
 use pocketmine\world\generator\InvalidGeneratorOptionsException;
+use pocketmine\world\thread\Future;
+use pocketmine\world\thread\FutureResolver;
 use PrefixedLogger;
 use RuntimeException;
 use Symfony\Component\Filesystem\Path;
@@ -169,7 +169,7 @@ class WorldProviderThread extends Thread{
 		GlobalLogger::set($this->logger);
 		/** @var WorldProvider[] $providers */
 		$providers = [];
-		/** @var \pocketmine\lang\Language $lang */
+		/** @var Language $lang */
 		$lang = igbinary_unserialize($this->lang);
 		$mgr = new WorldProviderManager();
 
@@ -309,10 +309,22 @@ class WorldProviderThread extends Thread{
 		}
 	}
 
+	/**
+	 * @template TContext
+	 * @template TReturn
+	 * @param ThreadSafeArray<int, FutureResolver<TContext, TReturn>> $queue
+	 * @return FutureResolver<TContext, TReturn>|null
+	 */
 	private function lockedShift(ThreadSafeArray $queue) : ?FutureResolver{
 		return $queue->synchronized(fn() => $queue->shift());
 	}
 
+	/**
+	 * @template TKey of array-key
+	 * @template TValue
+	 * @param ThreadSafeArray<TKey, TValue> $queue
+	 * @return array<TKey, TValue>
+	 */
 	private function lockedGetAll(ThreadSafeArray $queue) : array{
 		return $queue->synchronized(fn() => iterator_to_array($queue));
 	}
@@ -321,6 +333,7 @@ class WorldProviderThread extends Thread{
 	 * @return Future<ThreadedWorldProvider|null>
 	 */
 	public function register(string $folderName, bool $autoUpgrade = true) : Future{
+		/** @var FutureResolver<array{0: string, 1: bool}, ?BaseThreadedWorldProvider> $resolver */
 		$resolver = new FutureResolver([$folderName, $autoUpgrade]);
 		$this->logger->debug("Registering world provider for $folderName.");
 		$this->loadQueue->synchronized(fn() => $this->loadQueue[] = $resolver);
@@ -334,6 +347,7 @@ class WorldProviderThread extends Thread{
 	 * @return Future<ThreadedWorldProvider>
 	 */
 	public function unregister(string $folderName) : Future{
+		/** @var FutureResolver<string, void> $resolver */
 		$resolver = new FutureResolver($folderName);
 		$this->logger->debug("Unregistering world provider for $folderName.");
 		$this->unloadQueue->synchronized(fn() => $this->unloadQueue[] = $resolver);

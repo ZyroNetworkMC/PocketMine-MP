@@ -23,14 +23,16 @@ declare(strict_types=1);
 
 namespace pocketmine\world\format;
 
-use pocketmine\world\thread\Future;
 use pocketmine\world\format\io\ChunkData;
 use pocketmine\world\format\io\LoadedChunkData;
 use pocketmine\world\format\io\WorldData;
 use pocketmine\world\format\io\WorldProvider;
 use pocketmine\world\format\io\WritableWorldProvider;
+use pocketmine\world\thread\Future;
+use function assert;
 use function igbinary_serialize;
 use function igbinary_unserialize;
+use function is_string;
 
 class BaseThreadedWorldProvider implements ThreadedWorldProvider{
 	public function __construct(

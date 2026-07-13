@@ -100,7 +100,7 @@ class FutureResolver extends ThreadSafe{
 	}
 
 	/**
-	 * @param Closure():void $c
+	 * @param Closure():TReturn $c
 	 */
 	public function do(Closure $c) : void{
 		try{

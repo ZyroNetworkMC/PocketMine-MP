@@ -93,12 +93,10 @@ use pocketmine\world\format\io\exception\CorruptedChunkException;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\format\io\LoadedChunkData;
 use pocketmine\world\format\io\WorldData;
-use pocketmine\world\format\io\WritableWorldProvider;
 use pocketmine\world\format\LightArray;
 use pocketmine\world\format\SubChunk;
 use pocketmine\world\format\ThreadedWorldProvider;
 use pocketmine\world\format\WorldProviderThread;
-use pocketmine\world\thread\Future;
 use pocketmine\world\generator\executor\AsyncGeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutorSetupParameters;
@@ -112,6 +110,7 @@ use pocketmine\world\particle\BlockBreakParticle;
 use pocketmine\world\particle\Particle;
 use pocketmine\world\sound\BlockPlaceSound;
 use pocketmine\world\sound\Sound;
+use pocketmine\world\thread\Future;
 use pocketmine\world\utils\SubChunkExplorer;
 use pocketmine\YmlServerProperties;
 use function abs;
@@ -129,6 +128,7 @@ use function floor;
 use function get_class;
 use function gettype;
 use function is_a;
+use function is_int;
 use function is_object;
 use function max;
 use function microtime;
@@ -3041,8 +3041,7 @@ class World implements ChunkManager{
 		return $this->chunks[$chunkHash];
 	}
 
-
-	private function onChunkDataLoaded(\pocketmine\world\format\io\LoadedChunkData $loadedChunkData, int $x, int $z, int $chunkHash) : void{
+	private function onChunkDataLoaded(LoadedChunkData $loadedChunkData, int $x, int $z, int $chunkHash) : void{
 		$chunkData = $loadedChunkData->getData();
 		$chunk = new Chunk($chunkData->getSubChunks(), $chunkData->isPopulated());
 		if(!$loadedChunkData->isUpgraded()){
