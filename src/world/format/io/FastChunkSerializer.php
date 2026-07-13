@@ -32,9 +32,11 @@ use pocketmine\world\format\Chunk;
 use pocketmine\world\format\PalettedBlockArray;
 use pocketmine\world\format\SubChunk;
 use function array_values;
+use function assert;
 use function count;
 use function igbinary_serialize;
 use function igbinary_unserialize;
+use function is_string;
 use function pack;
 use function strlen;
 use function unpack;
@@ -150,6 +152,7 @@ final class FastChunkSerializer{
 		}
 
 		$str = igbinary_serialize([$entityNBT, $tileNBT, $populated]);
+		assert(is_string($str));
 		// write varint length then raw bytes
 		VarInt::writeUnsignedInt($writer, strlen($str));
 		$writer->writeByteArray($str);
@@ -179,17 +182,23 @@ final class FastChunkSerializer{
 
 		$strLen = VarInt::readUnsignedInt($reader);
 		$str = $reader->readByteArray($strLen);
-		[$entityNBT, $tileNBT, $populated] = igbinary_unserialize($str);
+		/** @var array{0: list<\pocketmine\nbt\tag\CompoundTag>, 1: list<\pocketmine\nbt\tag\CompoundTag>, 2: bool} $dataArr */
+		$dataArr = igbinary_unserialize($str);
+		[$entityNBT, $tileNBT, $populated] = $dataArr;
 
 		return new ChunkData($subChunks, $populated, $entityNBT, $tileNBT);
 	}
 
 	public static function serializeLoadedChunkData(LoadedChunkData $data) : string{
-		return igbinary_serialize([self::serializeChunkData($data->getData()), $data->isUpgraded(), $data->getFixerFlags()]);
+		$str = igbinary_serialize([self::serializeChunkData($data->getData()), $data->isUpgraded(), $data->getFixerFlags()]);
+		assert(is_string($str));
+		return $str;
 	}
 
 	public static function deserializeLoadedChunkData(string $data) : LoadedChunkData{
-		[$data, $upgraded, $flags] = igbinary_unserialize($data);
+		/** @var array{0: string, 1: bool, 2: array<string, int>} $arr */
+		$arr = igbinary_unserialize($data);
+		[$data, $upgraded, $flags] = $arr;
 		return new LoadedChunkData(self::deserializeChunkData($data), $upgraded, $flags);
 	}
 }
