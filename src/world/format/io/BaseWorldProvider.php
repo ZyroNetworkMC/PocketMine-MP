@@ -115,6 +115,10 @@ abstract class BaseWorldProvider implements WorldProvider{
 		return $this->translatePalette(SubChunkConverter::convertSubChunkFromLegacyColumn($idArray, $metaArray, $yOffset), $logger);
 	}
 
+	public function reloadWorldData() : void{
+		$this->worldData = $this->loadLevelData();
+	}
+
 	public function getPath() : string{
 		return $this->path;
 	}

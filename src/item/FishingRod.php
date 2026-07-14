@@ -33,5 +33,32 @@ class FishingRod extends Durable{
 		return 384;
 	}
 
-	//TODO
+	public function onClickAir(\pocketmine\player\Player $player, \pocketmine\math\Vector3 $directionVector, array &$returnedItems) : ItemUseResult{
+		foreach($player->getWorld()->getEntities() as $entity){
+			if($entity instanceof \pocketmine\entity\projectile\FishingHook && $entity->getOwningEntity() === $player){
+				$entity->flagForDespawn();
+				$this->applyDamage(1);
+				return ItemUseResult::SUCCESS;
+			}
+		}
+
+		$location = $player->getLocation();
+		$hook = new \pocketmine\entity\projectile\FishingHook(\pocketmine\entity\Location::fromObject(
+			$player->getEyePos(),
+			$player->getWorld(),
+			($location->yaw > 180 ? 360 : 0) - $location->yaw,
+			-$location->pitch
+		), $player);
+		$hook->setMotion($directionVector->multiply(1.5));
+		
+		$projectileEv = new \pocketmine\event\entity\ProjectileLaunchEvent($hook);
+		$projectileEv->call();
+		if($projectileEv->isCancelled()){
+			$hook->flagForDespawn();
+			return ItemUseResult::FAIL;
+		}
+		
+		$hook->spawnToAll();
+		return ItemUseResult::SUCCESS;
+	}
 }

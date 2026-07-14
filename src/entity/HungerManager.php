@@ -215,7 +215,9 @@ class HungerManager{
 		}
 
 		if($food <= 6){
-			$this->entity->setSprinting(false);
+			if(!($this->entity instanceof \pocketmine\player\Player) || !$this->entity->getAllowFlight()){
+				$this->entity->setSprinting(false);
+			}
 		}
 	}
 

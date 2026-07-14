@@ -83,7 +83,12 @@
       "platform": {
          "php": "8.1.0"
       },
-      "sort-packages": true
+      "sort-packages": true,
+      "policy": {
+         "advisories": {
+            "block": false
+         }
+      }
    },
    "scripts": {
       "make-devtools": "@php -dphar.readonly=0 tests/plugins/DevTools/src/ConsoleScript.php --make ./ --relative tests/plugins/DevTools --out plugins/DevTools.phar",

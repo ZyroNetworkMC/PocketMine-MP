@@ -68,12 +68,12 @@ class Chunk{
 	/**
 	 * @param SubChunk[] $subChunks
 	 */
-	public function __construct(array $subChunks, bool $terrainPopulated){
+	public function __construct(array $subChunks, bool $terrainPopulated, ?int $biomeId = null){
 		$this->subChunks = new \SplFixedArray(Chunk::MAX_SUBCHUNKS);
 
 		foreach($this->subChunks as $y => $null){
 			//TODO: we should probably require all subchunks to be provided here
-			$this->subChunks[$y] = $subChunks[$y + self::MIN_SUBCHUNK_INDEX] ?? new SubChunk(Block::EMPTY_STATE_ID, [], new PalettedBlockArray(BiomeIds::OCEAN));
+			$this->subChunks[$y] = $subChunks[$y + self::MIN_SUBCHUNK_INDEX] ?? new SubChunk(Block::EMPTY_STATE_ID, [], new PalettedBlockArray($biomeId ?? BiomeIds::OCEAN));
 		}
 
 		$val = (self::MAX_SUBCHUNK_INDEX + 1) * SubChunk::EDGE_LENGTH;

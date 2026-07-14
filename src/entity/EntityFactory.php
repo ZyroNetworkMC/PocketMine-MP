@@ -45,6 +45,7 @@ use pocketmine\entity\projectile\Egg;
 use pocketmine\entity\projectile\EnderPearl;
 use pocketmine\entity\projectile\ExperienceBottle;
 use pocketmine\entity\projectile\IceBomb;
+use pocketmine\entity\projectile\FishingHook;
 use pocketmine\entity\projectile\Snowball;
 use pocketmine\entity\projectile\SplashPotion;
 use pocketmine\entity\projectile\Trident;
@@ -168,6 +169,10 @@ final class EntityFactory{
 		$this->register(Snowball::class, function(World $world, CompoundTag $nbt) : Snowball{
 			return new Snowball(Helper::parseLocation($nbt, $world), null, $nbt);
 		}, ['Snowball', 'minecraft:snowball']);
+
+		$this->register(FishingHook::class, function(World $world, CompoundTag $nbt) : FishingHook{
+			return new FishingHook(Helper::parseLocation($nbt, $world), null, $nbt);
+		}, ['FishingHook', 'minecraft:fishing_hook']);
 
 		$this->register(SplashPotion::class, function(World $world, CompoundTag $nbt) : SplashPotion{
 			$potionType = PotionTypeIdMap::getInstance()->fromId($nbt->getShort(SplashPotion::TAG_POTION_ID, PotionTypeIds::WATER));

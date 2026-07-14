@@ -125,8 +125,12 @@ class Farmland extends Transparent{
 					$changed = true;
 				}
 			}else{
-				$world->setBlock($this->position, VanillaBlocks::DIRT());
-				$changed = true;
+				$event = new FarmlandHydrationChangeEvent($this, 0, 0);
+				$event->call();
+				if(!$event->isCancelled()){
+					$world->setBlock($this->position, VanillaBlocks::DIRT());
+					$changed = true;
+				}
 			}
 		}elseif($this->wetness < self::MAX_WETNESS){
 			$event = new FarmlandHydrationChangeEvent($this, $this->wetness, self::MAX_WETNESS);

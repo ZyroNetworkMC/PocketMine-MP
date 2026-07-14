@@ -139,6 +139,7 @@ final class VanillaItems{
 	private static Pickaxe $_mCOPPER_PICKAXE;
 	private static Shovel $_mCOPPER_SHOVEL;
 	private static Sword $_mCOPPER_SWORD;
+	private static Crossbow $_mCROSSBOW;
 	private static CoralFan $_mCORAL_FAN;
 	private static HangingSign $_mCRIMSON_HANGING_SIGN;
 	private static ItemBlockWallOrFloor $_mCRIMSON_SIGN;
@@ -498,6 +499,7 @@ final class VanillaItems{
 			"copper_pickaxe" => fn(Pickaxe $v) => self::$_mCOPPER_PICKAXE = $v,
 			"copper_shovel" => fn(Shovel $v) => self::$_mCOPPER_SHOVEL = $v,
 			"copper_sword" => fn(Sword $v) => self::$_mCOPPER_SWORD = $v,
+			"crossbow" => fn(Crossbow $v) => self::$_mCROSSBOW = $v,
 			"coral_fan" => fn(CoralFan $v) => self::$_mCORAL_FAN = $v,
 			"crimson_hanging_sign" => fn(HangingSign $v) => self::$_mCRIMSON_HANGING_SIGN = $v,
 			"crimson_sign" => fn(ItemBlockWallOrFloor $v) => self::$_mCRIMSON_SIGN = $v,
@@ -1263,6 +1265,11 @@ final class VanillaItems{
 	public static function COPPER_SWORD() : Sword{
 		if(!isset(self::$_mCOPPER_SWORD)){ self::init(); }
 		return clone self::$_mCOPPER_SWORD;
+	}
+
+	public static function CROSSBOW() : Crossbow{
+		if(!isset(self::$_mCROSSBOW)){ self::init(); }
+		return clone self::$_mCROSSBOW;
 	}
 
 	public static function CORAL_FAN() : CoralFan{

@@ -820,7 +820,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 					$entity->despawnFrom($this);
 				}
 			}
-			$this->getNetworkSession()->stopUsingChunk($x, $z);
+			$this->getNetworkSession()->stopUsingChunk($x, $z, $world);
 			unset($this->usedChunks[$index]);
 			unset($this->activeChunkGenerationRequests[$index]);
 		}
@@ -852,7 +852,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 * Requests chunks from the world to be sent, up to a set limit every tick. This operates on the results of the most recent chunk
 	 * order.
 	 */
-	protected function requestChunks() : void{
+	public function requestChunks() : void{
 		if(!$this->isConnected()){
 			return;
 		}
@@ -871,6 +871,15 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$X = null;
 			$Z = null;
 			World::getXZ($index, $X, $Z);
+
+			if(!$world->isChunkLoading($X, $Z) && !$world->isChunkLoaded($X, $Z)) {
+				$world->queueChunk($X, $Z);
+				continue;
+			}
+
+			if($world->isChunkLoading($X, $Z)){
+				continue;
+			}
 
 			++$count;
 
@@ -897,7 +906,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 					unset($this->activeChunkGenerationRequests[$index]);
 					$this->usedChunks[$index] = UsedChunkStatus::REQUESTED_SENDING;
 
-					$this->getNetworkSession()->startUsingChunk($X, $Z, function() use ($X, $Z, $index) : void{
+					$this->getNetworkSession()->startUsingChunk($X, $Z, function() use ($X, $Z, $index, $world) : void{
 						$this->usedChunks[$index] = UsedChunkStatus::SENT;
 						if($this->spawnChunkLoadCount === -1){
 							$this->spawnEntitiesOnChunk($X, $Z);
@@ -909,6 +918,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 							$this->getNetworkSession()->notifyTerrainReady();
 						}
 						(new PlayerPostChunkSendEvent($this, $X, $Z))->call();
+						if(isset($this->usedChunks[$index]) && !$this->isChunkNeededForTicking($X, $Z)){
+							$world->unregisterChunkLoader($this->chunkLoader, $X, $Z);
+							$world->unloadChunk($X, $Z, true);
+						}
 					});
 				},
 				static function() : void{
@@ -964,6 +977,33 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if($this->getHealth() <= 0){
 			$this->logger->debug("Quit while dead, forcing respawn");
 			$this->actuallyRespawn();
+		}
+	}
+
+	private function isChunkNeededForTicking(int $chunkX, int $chunkZ) : bool{
+		for($x = -1; $x <= 1; ++$x){
+			for($z = -1; $z <= 1; ++$z){
+				if(isset($this->tickingChunks[World::chunkHash($chunkX + $x, $chunkZ + $z)])){
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private function updateChunkLoaderRegistrations() : void{
+		$world = $this->getWorld();
+		foreach($this->usedChunks as $hash => $status){
+			if($status === UsedChunkStatus::SENT){
+				World::getXZ($hash, $chunkX, $chunkZ);
+				if($this->isChunkNeededForTicking($chunkX, $chunkZ)){
+					$world->registerChunkLoader($this->chunkLoader, $chunkX, $chunkZ);
+				}else{
+					$world->unregisterChunkLoader($this->chunkLoader, $chunkX, $chunkZ);
+					$world->unloadChunk($chunkX, $chunkZ, true);
+				}
+			}
 		}
 	}
 
@@ -1031,8 +1071,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$this->loadQueue = $newOrder;
 
-		$this->updateTickingChunkRegistrations($this->tickingChunks, $tickingChunks);
+		$oldTickingChunks = $this->tickingChunks;
+		$this->updateTickingChunkRegistrations($oldTickingChunks, $tickingChunks);
 		$this->tickingChunks = $tickingChunks;
+		$this->updateChunkLoaderRegistrations();
 
 		if(count($this->loadQueue) > 0 || count($unloadChunks) > 0){
 			$this->getNetworkSession()->syncViewAreaCenterPoint($this->location, $this->viewDistance);
@@ -2909,7 +2951,11 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	}
 
 	public function onChunkUnloaded(int $chunkX, int $chunkZ, Chunk $chunk) : void{
+		$hash = World::chunkHash($chunkX, $chunkZ);
 		if($this->isUsingChunk($chunkX, $chunkZ)){
+			if(($this->usedChunks[$hash] ?? null) === UsedChunkStatus::SENT && !$this->isChunkNeededForTicking($chunkX, $chunkZ)){
+				return;
+			}
 			$this->logger->debug("Detected forced unload of chunk " . $chunkX . " " . $chunkZ);
 			$this->unloadChunk($chunkX, $chunkZ);
 		}

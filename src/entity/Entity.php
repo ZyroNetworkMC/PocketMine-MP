@@ -995,6 +995,10 @@ abstract class Entity{
 
 		$this->lastUpdate = $currentTick;
 
+		if(!$this->getWorld()->isChunkLoaded($this->location->getFloorX() >> Chunk::COORD_BIT_SIZE, $this->location->getFloorZ() >> Chunk::COORD_BIT_SIZE)){
+			return true;
+		}
+
 		if($this->justCreated){
 			$this->onFirstUpdate($currentTick);
 		}
