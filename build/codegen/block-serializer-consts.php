@@ -98,7 +98,7 @@ function generateBlockPaletteReport(array $states) : BlockPaletteReport{
 }
 
 function constifyMcId(string $id) : string{
-	return strtoupper(explode(":", $id, 2)[1]);
+	return str_replace(".", "_", strtoupper(explode(":", $id, 2)[1]));
 }
 
 function generateClassHeader(string $className, string $fileHeader) : string{
