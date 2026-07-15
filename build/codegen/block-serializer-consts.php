@@ -206,9 +206,22 @@ if($paletteRaw === false){
 }
 
 try{
-	$states = BlockStateDictionary::loadPaletteFromString($paletteRaw);
-}catch(NbtException){
-	fwrite(STDERR, "Invalid block palette file $argv[1]\n");
+	if(str_starts_with($paletteRaw, "\x1f\x8b")){
+		$paletteRaw = zlib_decode($paletteRaw);
+		$root = (new \pocketmine\nbt\BigEndianNbtSerializer())->read($paletteRaw);
+		$states = [];
+		foreach($root->mustGetCompoundTag()->getListTag("blocks") as $blockData){
+            /** @var \pocketmine\nbt\tag\CompoundTag $blockData */
+			$blockData->removeTag("network_id");
+			$blockData->removeTag("name_hash");
+			$blockData->removeTag("version"); // Just in case
+			$states[] = BlockStateData::fromNbt($blockData);
+		}
+	} else {
+		$states = BlockStateDictionary::loadPaletteFromString($paletteRaw);
+	}
+}catch(\Throwable $e){
+	fwrite(STDERR, "Invalid block palette file $argv[1]: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
 	exit(1);
 }
 
