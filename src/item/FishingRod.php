@@ -50,14 +50,14 @@ class FishingRod extends Durable{
 			-$location->pitch
 		), $player);
 		$hook->setMotion($directionVector->multiply(1.5));
-		
+
 		$projectileEv = new \pocketmine\event\entity\ProjectileLaunchEvent($hook);
 		$projectileEv->call();
 		if($projectileEv->isCancelled()){
 			$hook->flagForDespawn();
 			return ItemUseResult::FAIL;
 		}
-		
+
 		$hook->spawnToAll();
 		return ItemUseResult::SUCCESS;
 	}

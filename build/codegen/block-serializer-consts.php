@@ -27,7 +27,6 @@ use pocketmine\data\bedrock\block\BlockStateData;
 use pocketmine\data\bedrock\block\BlockStateNames;
 use pocketmine\data\bedrock\block\BlockStateStringValues;
 use pocketmine\data\bedrock\block\BlockTypeNames;
-use pocketmine\nbt\NbtException;
 use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\IntTag;
 use pocketmine\nbt\tag\StringTag;
@@ -52,9 +51,12 @@ use function mb_strtoupper;
 use function mkdir;
 use function preg_replace;
 use function sort;
+use function str_replace;
+use function str_starts_with;
 use function strrpos;
 use function strtoupper;
 use function substr;
+use function zlib_decode;
 use const SORT_STRING;
 use const STDERR;
 
@@ -207,11 +209,15 @@ if($paletteRaw === false){
 
 try{
 	if(str_starts_with($paletteRaw, "\x1f\x8b")){
-		$paletteRaw = zlib_decode($paletteRaw);
+		$decoded = zlib_decode($paletteRaw);
+		if($decoded === false) throw new \RuntimeException("Failed to decompress block palette");
+		$paletteRaw = $decoded;
 		$root = (new \pocketmine\nbt\BigEndianNbtSerializer())->read($paletteRaw);
 		$states = [];
-		foreach($root->mustGetCompoundTag()->getListTag("blocks") as $blockData){
-            /** @var \pocketmine\nbt\tag\CompoundTag $blockData */
+		$blocks = $root->mustGetCompoundTag()->getListTag("blocks");
+		if($blocks === null) throw new \RuntimeException("Missing blocks list");
+		/** @var \pocketmine\nbt\tag\CompoundTag $blockData */
+		foreach($blocks->getValue() as $blockData){
 			$blockData->removeTag("network_id");
 			$blockData->removeTag("name_hash");
 			$blockData->removeTag("version"); // Just in case

@@ -24,13 +24,18 @@ declare(strict_types=1);
 namespace pocketmine\world\format;
 
 use PHPUnit\Framework\TestCase;
-use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\data\bedrock\BiomeIds;
 use pocketmine\network\mcpe\convert\TypeConverter;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use pocketmine\network\mcpe\serializer\ChunkSerializer;
 use pocketmine\world\format\io\FastChunkSerializer;
+use function fwrite;
+use function gc_collect_cycles;
+use function hrtime;
+use function memory_get_peak_usage;
+use function memory_get_usage;
+use const STDOUT;
 
 class ChunkTest extends TestCase{
 
@@ -78,7 +83,7 @@ class ChunkTest extends TestCase{
 				$chunk->setHeightMap($x, $z, 6);
 			}
 		}
-		
+
 		$chunk->setPopulated(true);
 
 		gc_collect_cycles();
