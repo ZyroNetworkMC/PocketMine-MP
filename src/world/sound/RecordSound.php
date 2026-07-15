@@ -52,7 +52,8 @@ class RecordSound implements Sound{
 			RecordType::DISK_STRAD => LevelSoundEvent::RECORD_STRAD,
 			RecordType::DISK_WARD => LevelSoundEvent::RECORD_WARD,
 			RecordType::DISK_11 => LevelSoundEvent::RECORD_11,
-			RecordType::DISK_WAIT => LevelSoundEvent::RECORD_WAIT
+			RecordType::DISK_WAIT => LevelSoundEvent::RECORD_WAIT,
+			RecordType::DISK_BOUNCE => LevelSoundEvent::RECORD_BOUNCE
 		}, $pos, false)];
 	}
 }

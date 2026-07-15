@@ -61,7 +61,7 @@ class Crossbow extends Tool implements Releasable{
 		}
 
 		$diff = $player->getItemUseDuration();
-		$quickCharge = $this->getEnchantmentLevel(VanillaEnchantments::QUICK_CHARGE());
+		$quickCharge = 0; // TODO: Implement QUICK_CHARGE enchantment when added to PMMP
 		$chargeTime = max(0, 25 - ($quickCharge * 5));
 		
 		if($diff < $chargeTime){
