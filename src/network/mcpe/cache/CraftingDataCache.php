@@ -46,7 +46,8 @@ use Ramsey\Uuid\Uuid;
 use function array_map;
 use function spl_object_id;
 
-final class CraftingDataCache{
+final class CraftingDataCache
+{
 	use SingletonTrait;
 
 	/**
@@ -61,13 +62,14 @@ final class CraftingDataCache{
 	 */
 	public const RECIPE_ID_OFFSET = 1;
 
-	public function getCache(CraftingManager $manager) : CraftingDataPacket{
+	public function getCache(CraftingManager $manager): CraftingDataPacket
+	{
 		$id = spl_object_id($manager);
-		if(!isset($this->caches[$id])){
-			$manager->getDestructorCallbacks()->add(function() use ($id) : void{
+		if (!isset($this->caches[$id])) {
+			$manager->getDestructorCallbacks()->add(function () use ($id): void {
 				unset($this->caches[$id]);
 			});
-			$manager->getRecipeRegisteredCallbacks()->add(function() use ($id) : void{
+			$manager->getRecipeRegisteredCallbacks()->add(function () use ($id): void {
 				unset($this->caches[$id]);
 			});
 			$this->caches[$id] = $this->buildCraftingDataCache($manager);
@@ -78,7 +80,8 @@ final class CraftingDataCache{
 	/**
 	 * Rebuilds the cached CraftingDataPacket.
 	 */
-	private function buildCraftingDataCache(CraftingManager $manager) : CraftingDataPacket{
+	private function buildCraftingDataCache(CraftingManager $manager): CraftingDataPacket
+	{
 		Timings::$craftingDataCacheRebuild->startTiming();
 
 		$nullUUID = Uuid::fromString(Uuid::NIL);
@@ -87,11 +90,11 @@ final class CraftingDataCache{
 
 		$noUnlockingRequirement = new RecipeUnlockingRequirement(RecipeUnlockingRequirement::CONTEXT_ALWAYS_UNLOCKED, null);
 		$recipeNetId = self::RECIPE_ID_OFFSET;
-		foreach($manager->getCraftingRecipeIndex() as $index => $recipe){
+		foreach ($manager->getCraftingRecipeIndex() as $index => $recipe) {
 			//the client doesn't like recipes with an ID of 0, so we need to offset them
 			$recipeNetId = $index + self::RECIPE_ID_OFFSET;
-			if($recipe instanceof ShapelessRecipe){
-				$typeTag = match($recipe->getType()){
+			if ($recipe instanceof ShapelessRecipe) {
+				$typeTag = match ($recipe->getType()) {
 					ShapelessRecipeType::CRAFTING => CraftingRecipeBlockName::CRAFTING_TABLE,
 					ShapelessRecipeType::STONECUTTER => CraftingRecipeBlockName::STONECUTTER,
 					ShapelessRecipeType::CARTOGRAPHY => CraftingRecipeBlockName::CARTOGRAPHY_TABLE,
@@ -108,11 +111,11 @@ final class CraftingDataCache{
 					$noUnlockingRequirement,
 					$recipeNetId
 				);
-			}elseif($recipe instanceof ShapedRecipe){
+			} elseif ($recipe instanceof ShapedRecipe) {
 				$inputs = [];
 
-				for($row = 0, $height = $recipe->getHeight(); $row < $height; ++$row){
-					for($column = 0, $width = $recipe->getWidth(); $column < $width; ++$column){
+				for ($row = 0, $height = $recipe->getHeight(); $row < $height; ++$row) {
+					for ($column = 0, $width = $recipe->getWidth(); $column < $width; ++$column) {
 						$inputs[$row][$column] = $converter->coreRecipeIngredientToNet($recipe->getIngredient($column, $row));
 					}
 				}
@@ -128,20 +131,20 @@ final class CraftingDataCache{
 					$noUnlockingRequirement,
 					$recipeNetId,
 				);
-			}else{
+			} else {
 				//TODO: probably special recipe types
 			}
 		}
 
-		foreach(FurnaceType::cases() as $furnaceType){
-			$typeTag = match($furnaceType){
+		foreach (FurnaceType::cases() as $furnaceType) {
+			$typeTag = match ($furnaceType) {
 				FurnaceType::FURNACE => FurnaceRecipeBlockName::FURNACE,
 				FurnaceType::BLAST_FURNACE => FurnaceRecipeBlockName::BLAST_FURNACE,
 				FurnaceType::SMOKER => FurnaceRecipeBlockName::SMOKER,
 				FurnaceType::CAMPFIRE => FurnaceRecipeBlockName::CAMPFIRE,
 				FurnaceType::SOUL_CAMPFIRE => FurnaceRecipeBlockName::SOUL_CAMPFIRE
 			};
-			foreach($manager->getFurnaceRecipeManager($furnaceType)->getAll() as $recipe){
+			foreach ($manager->getFurnaceRecipeManager($furnaceType)->getAll() as $recipe) {
 				$recipeNetId++;
 				$recipesWithTypeIds[] = new ProtocolShapelessRecipe(
 					CraftingDataPacket::ENTRY_SHAPELESS,
@@ -159,10 +162,10 @@ final class CraftingDataCache{
 
 		$itemTypeDictionary = $converter->getItemTypeDictionary();
 		$potionTypeRecipes = [];
-		foreach($manager->getPotionTypeRecipes() as $recipe){
+		foreach ($manager->getPotionTypeRecipes() as $recipe) {
 			$input = $converter->coreRecipeIngredientToNet($recipe->getInput())->getDescriptor();
 			$ingredient = $converter->coreRecipeIngredientToNet($recipe->getIngredient())->getDescriptor();
-			if(!$input instanceof NameItemDescriptor || !$ingredient instanceof NameItemDescriptor){
+			if (!$input instanceof NameItemDescriptor || !$ingredient instanceof NameItemDescriptor) {
 				throw new AssumptionFailedError();
 			}
 			$output = $converter->coreItemStackToNet($recipe->getOutput());
@@ -177,10 +180,10 @@ final class CraftingDataCache{
 		}
 
 		$potionContainerChangeRecipes = [];
-		foreach($manager->getPotionContainerChangeRecipes() as $recipe){
+		foreach ($manager->getPotionContainerChangeRecipes() as $recipe) {
 			$input = $itemTypeDictionary->fromStringId($recipe->getInputItemId());
 			$ingredient = $converter->coreRecipeIngredientToNet($recipe->getIngredient())->getDescriptor();
-			if(!$ingredient instanceof NameItemDescriptor){
+			if (!$ingredient instanceof NameItemDescriptor) {
 				throw new AssumptionFailedError();
 			}
 			$output = $itemTypeDictionary->fromStringId($recipe->getOutputItemId());

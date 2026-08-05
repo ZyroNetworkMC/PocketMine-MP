@@ -32,39 +32,53 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function random_bytes;
+use function str_ends_with;
 use function str_repeat;
 use const JSON_THROW_ON_ERROR;
 
-class LegacySkinAdapter implements SkinAdapter{
+class LegacySkinAdapter implements SkinAdapter
+{
 
-	public function toSkinData(Skin $skin) : SkinData{
+	private const DEFAULT_GEOMETRY_NAME = "geometry.humanoid.custom";
+	private const SLIM_GEOMETRY_NAME_SUFFIX = "Slim";
+	private const EMPTY_GEOMETRY_DATA = "{}";
+	private const GEOMETRY_ENGINE_VERSION = "0.0.0";
+
+	public function toSkinData(Skin $skin) : SkinData
+	{
 		$capeData = $skin->getCapeData();
 		$capeImage = $capeData === "" ? new SkinImage(0, 0, "") : new SkinImage(32, 64, $capeData);
 		$geometryName = $skin->getGeometryName();
-		if($geometryName === ""){
-			$geometryName = "geometry.humanoid.custom";
+		if ($geometryName === "") {
+			$geometryName = self::DEFAULT_GEOMETRY_NAME;
 		}
+		$geometryData = $skin->getGeometryData();
 		return new SkinData(
 			$skin->getSkinId(),
 			"", //TODO: playfab ID
 			json_encode(["geometry" => ["default" => $geometryName]], JSON_THROW_ON_ERROR),
-			SkinImage::fromLegacy($skin->getSkinData()), [],
+			SkinImage::fromLegacy($skin->getSkinData()),
+			[],
 			$capeImage,
-			$skin->getGeometryData()
+			$geometryData === "" ? self::EMPTY_GEOMETRY_DATA : $geometryData,
+			self::GEOMETRY_ENGINE_VERSION,
+			armSize: str_ends_with($geometryName, self::SLIM_GEOMETRY_NAME_SUFFIX) ? SkinData::ARM_SIZE_SLIM : SkinData::ARM_SIZE_WIDE,
+			trustedSkinFlag: SkinData::TRUSTED_SKIN_FLAG_TRUE
 		);
 	}
 
-	public function fromSkinData(SkinData $data) : Skin{
-		if($data->isPersona()){
+	public function fromSkinData(SkinData $data) : Skin
+	{
+		if ($data->isPersona()) {
 			return new Skin("Standard_Custom", str_repeat(random_bytes(3) . "\xff", 4096));
 		}
 
 		$capeData = $data->isPersonaCapeOnClassic() ? "" : $data->getCapeImage()->getData();
 
 		$resourcePatch = json_decode($data->getResourcePatch(), true);
-		if(is_array($resourcePatch) && isset($resourcePatch["geometry"]["default"]) && is_string($resourcePatch["geometry"]["default"])){
+		if (is_array($resourcePatch) && isset($resourcePatch["geometry"]["default"]) && is_string($resourcePatch["geometry"]["default"])) {
 			$geometryName = $resourcePatch["geometry"]["default"];
-		}else{
+		} else {
 			throw new InvalidSkinException("Missing geometry name field");
 		}
 
